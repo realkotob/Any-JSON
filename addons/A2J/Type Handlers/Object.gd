@@ -106,8 +106,10 @@ func from_json(json:Dictionary, ruleset:Dictionary) -> Object:
 		report_error(0)
 	registered_object = registered_object as Object
 
-	# Get rules.
+	# Add result object to "ids_to_objects" for use in references.
 	var result := _get_default_object(registered_object, object_class, ruleset)
+	A2J._process_data.ids_to_objects.set(str(id), result)
+	# Get rules.
 	var properties_to_reference:Dictionary[String,String] = ruleset.get('property_references', Dictionary({}, TYPE_STRING, '', null, TYPE_STRING, '', null))
 	var properties_to_exclude:Array = ruleset.get('property_exclusions', [])
 	var properties_to_include:Array = ruleset.get('property_inclusions', [])
@@ -145,9 +147,6 @@ func from_json(json:Dictionary, ruleset:Dictionary) -> Object:
 		# Update property type details after script has been applied to the object.
 		if key == 'script':
 			all_property_type_details = _get_all_property_type_details(result)
-
-	# Add result object to "ids_to_objects" for use in references.
-	A2J._process_data.ids_to_objects.set(str(id), result)
 
 	return result
 
