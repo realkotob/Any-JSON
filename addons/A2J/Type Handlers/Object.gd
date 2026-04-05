@@ -85,7 +85,8 @@ func to_json(object:Object, ruleset:Dictionary) -> Variant:
 		# Set new value.
 		result.set(property.name, new_value)
 		A2J._tree_position.pop_back()
-
+	if object is DPITexture:
+		result["source"] = object.get_source()
 	return result
 
 
@@ -99,7 +100,7 @@ func from_json(json:Dictionary, ruleset:Dictionary) -> Object:
 	# Set object class & id.
 	object_class = split_object_class[2]
 	var id = split_object_class[1]
-	
+
 	# Get & check registered object equivalent.
 	var registered_object = A2J.object_registry.get(object_class, null)
 	if registered_object == null:
@@ -108,6 +109,9 @@ func from_json(json:Dictionary, ruleset:Dictionary) -> Object:
 
 	# Add result object to "ids_to_objects" for use in references.
 	var result := _get_default_object(registered_object, object_class, ruleset)
+	# DPITexture should be created with create_from_string.
+	if object_class == &"DPITexture" and "source" in json:
+		result = DPITexture.create_from_string(json["source"])
 	A2J._process_data.ids_to_objects.set(str(id), result)
 	# Get rules.
 	var properties_to_reference:Dictionary[String,String] = ruleset.get('property_references', Dictionary({}, TYPE_STRING, '', null, TYPE_STRING, '', null))
@@ -127,6 +131,7 @@ func from_json(json:Dictionary, ruleset:Dictionary) -> Object:
 
 	# Convert all values in the dictionary.
 	for key in keys:
+		if object_class == &"DPITexture" and key == "source": continue # skip source as it is used when DPITexture is created with create_from_string
 		if _validate_object_property(result, key, {}, properties_to_exclude, properties_to_include, do_properties_to_include, ruleset) == false: continue
 		A2J._tree_position.append(key)
 		var value = json[key]
@@ -167,7 +172,7 @@ func _validate_object_property(result, name:String, properties_to_reference:Dict
 func _resolve_reference(value, result, ruleset:Dictionary, object:Object, property:String, reference_to_resolve) -> Variant:
 	var resolved_reference = A2J._from_json(reference_to_resolve)
 	if resolved_reference is String && resolved_reference == '_A2J_unresolved_reference': resolved_reference = null
-	
+
 	# Set value as metadata.
 	if property.begins_with('metadata/'):
 		object.set_meta(property.replace('metadata/',''), resolved_reference)
