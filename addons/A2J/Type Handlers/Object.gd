@@ -21,6 +21,12 @@ func _init() -> void:
 		'"property_inclusions" in ruleset should be structured as follows: Array[String].',
 		'Cannot convert from an invalid JSON representation.',
 	]
+	init_data = {
+		# Property type data cache.
+		# This is used to store per-class property type data so
+		# it does not need to be grabbed & processed for every object.
+		'ptd_cache': {},
+	}
 
 
 func to_json(object:Object, ruleset:Dictionary) -> Variant:
@@ -133,7 +139,14 @@ func from_json(headers:PackedStringArray, json:Dictionary, ruleset:Dictionary) -
 			keys.erase(item)
 			keys.insert(0, item)
 	# Dont get property type details before script is applied.
-	var all_property_type_details:Dictionary[String,Dictionary] = _get_all_property_type_details(result) if not has_script else script_property_type_details
+	var all_property_type_details:Dictionary[String,Dictionary] = script_property_type_details
+	if not has_script:
+		var ptd_cache = A2J._process_data.ptd_cache.get(object_class,null)
+		if ptd_cache is Dictionary:
+			all_property_type_details = ptd_cache
+		else:
+			all_property_type_details = _get_all_property_type_details(result)
+			A2J._process_data.ptd_cache.set(object_class, all_property_type_details)
 
 	# Convert all values in the dictionary.
 	for key in keys:
@@ -157,7 +170,12 @@ func from_json(headers:PackedStringArray, json:Dictionary, ruleset:Dictionary) -
 
 		# Update property type details after script has been applied to the object.
 		if key == 'script':
-			all_property_type_details = _get_all_property_type_details(result)
+			var ptd_cache = A2J._process_data.ptd_cache.get(id,null)
+			if ptd_cache is Dictionary:
+				all_property_type_details = ptd_cache
+			else:
+				all_property_type_details = _get_all_property_type_details(result)
+				A2J._process_data.ptd_cache.set(id, all_property_type_details)
 
 	return result
 
