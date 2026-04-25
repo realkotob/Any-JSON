@@ -13,7 +13,7 @@ const script_property_type_details:Dictionary[String,Dictionary] = {
 
 func _init() -> void:
 	error_strings = [
-		'Class "~~" is not defined in registry.',
+		'Class "%s" is not defined in registry.',
 		'"property_exclusions" in ruleset should be structured as follows: Array[String].',
 		'"property_references" in ruleset should be structured as follows: Dictionary[String,String].',
 		'"instantiator_function" in ruleset should be structured as follows: Callable(registered_object:Object, object_class:String, args:Array=[]) -> Object.',
@@ -21,9 +21,6 @@ func _init() -> void:
 		'"property_inclusions" in ruleset should be structured as follows: Array[String].',
 		'Cannot convert from an invalid JSON representation.',
 	]
-	init_data = {
-		'ids_to_objects': {},
-	}
 
 
 func to_json(object:Object, ruleset:Dictionary) -> Variant:
@@ -41,17 +38,17 @@ func to_json(object:Object, ruleset:Dictionary) -> Variant:
 	# If object is an external resource, return a reference to it.
 	if ruleset.get('automatic_resource_references') == true && object is Resource:
 		if not object.resource_path.is_empty() && not object.resource_path.contains('::'):
-			return _make_reference('.res:%s' % object.resource_path)
+			return A2JReferenceTypeHandler.make_reference('r:%s' % object.resource_path)
 
 	# If object has been serialized before, return a reference to it.
-	var ids_to_objects:Dictionary = A2J._process_data.ids_to_objects
-	var id = ids_to_objects.find_key(object)
-	if id != null:
-		return _make_reference('.i'+str(id))
-	# If not, add to object stack & update index.
+	var variant_map:Dictionary = A2J._process_data.variant_map
+	var id = variant_map.find_key(object)
+	if id is int:
+		return A2JReferenceTypeHandler.make_reference(str(id))
+	# If not, add to map.
 	else:
-		id = ids_to_objects.keys().size()
-		A2J._process_data.ids_to_objects.set(id, object)
+		id = variant_map.keys().size()
+		A2J._process_data.variant_map.set(id, object)
 
 	# Set up result.
 	var result:Dictionary[String,Variant] = {
@@ -93,16 +90,19 @@ func to_json(object:Object, ruleset:Dictionary) -> Variant:
 	return result
 
 
-func from_json(json:Dictionary, ruleset:Dictionary) -> Object:
-	var object_class:StringName = json.get('.t', '')
-	var split_object_class = object_class.split(':')
-	# Throw error if invalid number of splits.
-	if split_object_class.size() != 3:
+func from_json(headers:PackedStringArray, json:Dictionary, ruleset:Dictionary) -> Object:
+	# Throw error if invalid number of headers.
+	if headers.size() != 3:
 		report_error(6)
-		return Object.new()
+		return null
 	# Set object class & id.
-	object_class = split_object_class[2]
-	var id = split_object_class[1]
+	var object_class:String = headers[2]
+	var id = headers[1]
+	# Throw error if invalid id.
+	if not id.is_valid_int():
+		report_error(6)
+		return null
+	id = id.to_int()
 
 	# Get & check registered object equivalent.
 	var registered_object = A2J.object_registry.get(object_class, null)
@@ -117,8 +117,8 @@ func from_json(json:Dictionary, ruleset:Dictionary) -> Object:
 		result = DPITexture.create_from_string(json['source'])
 	else:
 		result = _get_default_object(registered_object, object_class, ruleset)
-	# Add result object to "ids_to_objects" for use in references.
-	A2J._process_data.ids_to_objects.set(str(id), result)
+	# Add result object to "variant_map" for use in references.
+	A2J._process_data.variant_map.set(id, result)
 	# Get rules.
 	var properties_to_reference:Dictionary[String,String] = ruleset.get('property_references', Dictionary({}, TYPE_STRING, '', null, TYPE_STRING, '', null))
 	var properties_to_exclude:Array = ruleset.get('property_exclusions', [])
@@ -170,7 +170,7 @@ func _validate_object_property(result, name:String, properties_to_reference:Dict
 	# If reference is on "properties_to_reference" list. Set a reference of the property.
 	if name in properties_to_reference:
 		var reference_name = properties_to_reference[name]
-		result.set(name, _make_reference(reference_name))
+		result.set(name, A2JReferenceTypeHandler.make_reference(reference_name))
 		return false
 	return true
 
@@ -185,14 +185,6 @@ func _resolve_reference(value, result, ruleset:Dictionary, object:Object, proper
 	# Set value
 	else: object.set(property, resolved_reference)
 
-	return result
-
-
-func _make_reference(name:String) -> Dictionary[String,Variant]:
-	var result:Dictionary[String,Variant] = {
-		'.t': 'A2JRef',
-		'v': name,
-	}
 	return result
 
 

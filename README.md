@@ -4,7 +4,7 @@
 
 Godot 4.5 / 4.6 plugin to convert any Godot variant to raw JSON & back.
 
-[![Release](https://img.shields.io/badge/-gray?style=flat&logo=discord)](https://dsc.gg/sohp) **Version:** 2.0.1
+[![Release](https://img.shields.io/badge/-gray?style=flat&logo=discord)](https://dsc.gg/sohp) **Version:** 3.0.0
 
 </div>
 
@@ -273,9 +273,9 @@ A2J.object_registry.merge({
 # Add instantiator arguments for "custom_class_3".
 var ruleset := {
   '@global': {
-    'instantiator_arguments': {
+	'instantiator_arguments': {
   	'custom_class_3': [100], # With this, "custom_class_3" will be instantiated with the first argument in it's constructor as "100".
-    },
+	},
   },
 }
 ```
@@ -302,9 +302,9 @@ class custom_class:
 var ruleset := {
   # Excludes the "var_1" property for "custom_class".
   'custom_class': {
-    'property_exclusions': [
-      'var_1',
-    ],
+	'property_exclusions': [
+	  'var_1',
+	],
   },
 }
 
@@ -330,9 +330,9 @@ This is how you can deserialize AJSON data without the risk of running external 
 ```gdscript
 var ruleset := {
   '@global': {
-    'class_exclusions@des': [
+	'class_exclusions@des': [
   	'GDScript',
-    ],
+	],
   },
 }
 

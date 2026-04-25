@@ -30,7 +30,7 @@ const default_ruleset:Dictionary[String,Dictionary] = {
 		'class_exclusions': [],
 		'class_inclusions': [],
 		'exclude_private_properties': true,
-		'exclude_default_properties': true,
+		'exclude_default_values': true,
 		'automatic_resource_references': true,
 	},
 	# Rules applied only to the [class Resource] class.
@@ -46,7 +46,7 @@ const default_ruleset:Dictionary[String,Dictionary] = {
 }
 
 const error_strings:PackedStringArray = [
-	'No handler implemented for type "~~". Make a handler with the abstract A2JTypeHandler class.',
+	'No handler implemented for type "%s". Make a handler with the abstract A2JTypeHandler class.',
 	'"type_exclusions" & "type_inclusions" in ruleset should be structured as follows: Array[String].',
 	'"class_exclusions" & "class_inclusions" in ruleset should be structured as follows: Array[String].',
 ]
@@ -66,7 +66,7 @@ static var _dictionary_type_handler := A2JDictionaryTypeHandler.new()
 ## A2JTypeHandlers that can be used.
 ## You can add custom type handlers here.
 static var type_handlers:Dictionary[String,A2JTypeHandler] = {
-	'A2JRef':A2JReferenceTypeHandler.new(),
+	'Ref':A2JReferenceTypeHandler.new(),
 	'Obj':_object_type_handler, 'Object':_object_type_handler,
 	'Array':_array_type_handler,
 	'Dictionary':_dictionary_type_handler,
@@ -214,6 +214,9 @@ static var time_to_finish:float = 0
 
 ## Data that [A2JTypeHandler] objects can share & use during serialization.
 ## Cleared before & after [code]to_json[/code] or [code]from_json[/code] is called.
+## [br][br]
+## Default fields:
+## [br]- [param variant_map: Dictionary[int,Variant]]
 static var _process_data: Dictionary
 
 ## The raw ruleset currently being used in serialization. Gets reset to the default ruleset after serialization.
@@ -247,11 +250,8 @@ static func report_error(error:int, ...translations) -> void:
 	var message = error_strings.get(error)
 	if message is not String: printerr(a2jError_+str(error))
 	else:
-		for tr in translations:
-			if tr is not String && tr is not StringName: continue
-			message = message.replace('~~', tr)
+		message = message % translations
 		printerr(a2jError_+message)
-
 	# Emit error.
 	error_server.core_error.emit(error, message)
 
@@ -335,13 +335,16 @@ static func _from_json(value, type_details:Dictionary={}, raw_ruleset:Dictionary
 	# Get type of value.
 	var type: String
 	var object_class: String
+	var headers: PackedStringArray
 	if value is Dictionary:
-		var split_type:Array = value.get('.t', '').split(':')
-		type = split_type[0]
-		if split_type.size() == 2: object_class = split_type[1]
+		headers = value.get('.t', '').split(':')
+		type = headers[0]
+		if headers.size() == 2: object_class = headers[1]
 		if type == '': type = 'Dictionary'
 	elif value is Array: type = 'Array'
 	else: type = type_string(typeof(value))
+	if headers.is_empty(): headers.append(type)
+	else: headers[0] = type
 
 	# If type excluded, return null.
 	if _type_excluded(type, ruleset): return null
@@ -370,16 +373,16 @@ static func _from_json(value, type_details:Dictionary={}, raw_ruleset:Dictionary
 	var result
 	# Type dictionary.
 	if type == 'Dictionary':
-		result = handler.from_json(value, ruleset, A2JUtil.type_dictionary({}, type_details))
+		result = handler.from_json(headers, value, ruleset, A2JUtil.type_dictionary({}, type_details))
 	# Type array.
 	elif type == 'Array':
-		result = handler.from_json(value, ruleset, A2JUtil.type_array([], type_details))
+		result = handler.from_json(headers, value, ruleset, A2JUtil.type_array([], type_details))
 	# Type other.
 	elif type_details.get('type') is int:
-		result = handler.from_json(value, ruleset)
+		result = handler.from_json(headers, value, ruleset)
 		result = type_convert(result, type_details.get('type'))
 	else:
-		result = handler.from_json(value, ruleset)
+		result = handler.from_json(headers, value, ruleset)
 	# Return result.
 	return result
 
@@ -458,6 +461,7 @@ static func _class_excluded(object_class:String, ruleset:Dictionary) -> bool:
 
 ## Initialize data for all registered [code]type_handlers[/code], into the [code]_process_data[/code] variable.
 static func _init_handler_data() -> void:
+	_process_data.set('variant_map', {})
 	for key:String in type_handlers:
 		var handler:A2JTypeHandler = type_handlers[key]
 		_process_data.merge(handler.init_data.duplicate(true), true)
