@@ -22,7 +22,7 @@ func _ready() -> void:
 func print_scene_callback() -> void:
 	print_rich('[color=yellow][b]Converting [code]%s[/code] scene to AJSON (excluding attached script & "last_result")...' % self.name)
 	# Use ruleset to set the script property as a reference that we can apply a value to during serialiation back to a Node. Doing this because I don't want to print the whole script source code in this example.
-	var ruleset := A2J.default_ruleset.duplicate(true)
+	var ruleset := A2J.default_ruleset
 	# Serialize.
 	var result = A2J.to_json(self, ruleset)
 	# Convert to formatted string if is Dict.
@@ -37,6 +37,7 @@ func print_scene_callback() -> void:
 	var result_back:Node = A2J.from_json(JSON.parse_string(result), ruleset)
 	print_rich(
 		'[b]Result back (%sms):[/b]' % A2J.time_to_finish,
+		'\n- metadata: [code]%s[/code]' % [result_back.get_meta_list()],
 		'\n- full object: [code]%s[/code]' % result_back,
 		'\n- color_pallete: [code]%s[/code]' % result_back.color_pallete,
 		'\n- cone: [code]%s[/code]' % result_back.cone,

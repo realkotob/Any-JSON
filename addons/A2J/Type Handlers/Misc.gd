@@ -138,7 +138,7 @@ func from_json(headers:PackedStringArray, json:Dictionary, ruleset:Dictionary) -
 				Vector3(value[6], value[7], value[8]),
 				Vector3(value[9], value[10], value[11]),
 			)
-		'Transform3D':
+		'Projection':
 			if value is not Array or value.size() != 16: report_error(1); return null
 			if not A2JUtil.is_number_array(value): report_error(1); return null
 			return Projection(

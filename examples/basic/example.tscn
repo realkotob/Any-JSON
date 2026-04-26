@@ -21,3 +21,4 @@ script = ExtResource("1_3snss")
 color_pallete = ExtResource("2_my3cj")
 cone = ExtResource("3_lfftu")
 my_res = SubResource("Resource_my3cj")
+metadata/test = true

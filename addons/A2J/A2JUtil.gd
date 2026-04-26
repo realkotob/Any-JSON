@@ -1,5 +1,5 @@
 ## Provides common functions for all A2J systems to use.
-class_name A2JUtil extends RefCounted
+class_name A2JUtil extends Object
 
 
 const variant_type_string_map:Dictionary[Variant.Type,StringName] = {

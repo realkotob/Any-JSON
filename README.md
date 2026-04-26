@@ -186,6 +186,10 @@ Exclude object properties that start with an underscore. Also affects object met
 ### `exclude_default_values (bool=false)`:
 Exclude object properties with values the same as the default of that property. This can be enabled to prevent saving unnecessary data.
 
+### `snap_floats_to (float)`:
+If passed, the value to snap float variables to (using `@GlobalScope.snappedf`).
+This is useful to cut down on space if you have many float values that you do not need to be so precise.
+
 ## Advanced rules
 
 ### `automatic_resource_references (bool=false)`
